@@ -8,6 +8,7 @@ export default {
     explore: "Explore",
     library: "Library",
     search: "Search",
+    github: "GitHub Repo",
   },
   footer: {
     settings: "Settings",
@@ -142,11 +143,13 @@ export default {
     clearSongsCache: "Clear Songs Cache",
     cacheCount: "Cached {song} songs ({size})",
     showLyricsTranslation: "Show lyrics translation",
+    showLyricsDynamicBackground: "Show lyrics dynamic background",
     minimizeToTray: "Minimize to tray",
     showGitHubIcon: "Show GitHub icon",
     showUnavailableSongInGreyStyle: "Show unavailable song in grey style",
     showPlaylistsByAppleMusic: "Show playlists by Apple Music",
     enableDiscordRichPresence: "Enable Discord Rich Presence",
+    enableGlobalShortcut: "Enable Global Shortcut",
   },
   contextMenu: {
     play: "Play",

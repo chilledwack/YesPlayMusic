@@ -1,5 +1,12 @@
 "use strict";
-import { app, protocol, BrowserWindow, shell, dialog } from "electron";
+import {
+  app,
+  protocol,
+  BrowserWindow,
+  shell,
+  dialog,
+  globalShortcut,
+} from "electron";
 import { createProtocol } from "vue-cli-plugin-electron-builder/lib";
 import { startNeteaseMusicApi } from "./electron/services";
 import { initIpcMain } from "./electron/ipcMain.js";
@@ -7,6 +14,7 @@ import { createMenu } from "./electron/menu";
 import { createTray } from "@/electron/tray";
 import { createTouchBar } from "./electron/touchBar";
 import { createDockMenu } from "./electron/dockMenu";
+import { registerGlobalShortcut } from "./electron/globalShortcut";
 import { autoUpdater } from "electron-updater";
 import installExtension, { VUEJS_DEVTOOLS } from "electron-devtools-installer";
 import express from "express";
@@ -41,9 +49,6 @@ class Background {
 
     // create Express app
     this.createExpressApp();
-
-    // init ipcMain
-    initIpcMain(this.window, this.store);
 
     // Scheme must be registered before the app is ready
     protocol.registerSchemesAsPrivileged([
@@ -89,12 +94,13 @@ class Background {
     console.log("creating app window");
 
     this.window = new BrowserWindow({
-      width: this.store.get("window.width") | 1440,
-      height: this.store.get("window.height") | 840,
+      width: this.store.get("window.width") || 1440,
+      height: this.store.get("window.height") || 840,
       minWidth: 1080,
       minHeight: 720,
       titleBarStyle: "hiddenInset",
       frame: process.platform !== "win32",
+      title: "YesPlayMusic",
       webPreferences: {
         webSecurity: false,
         nodeIntegration: true,
@@ -124,7 +130,7 @@ class Background {
         .showMessageBox({
           title: "发现新版本 v" + info.version,
           message: "发现新版本 v" + info.version,
-          detail: "是否前往 Github 下载新版本安装包？",
+          detail: "是否前往 GitHub 下载新版本安装包？",
           buttons: ["下载", "取消"],
           type: "question",
           noLink: true,
@@ -178,6 +184,25 @@ class Background {
 
     this.window.webContents.on("new-window", function (e, url) {
       e.preventDefault();
+      console.log("open url");
+      const excludeHosts = ["www.last.fm"];
+      const exclude = excludeHosts.find((host) => url.includes(host));
+      if (exclude) {
+        const newWindow = new BrowserWindow({
+          width: 800,
+          height: 600,
+          titleBarStyle: "default",
+          title: "YesPlayMusic",
+          webPreferences: {
+            webSecurity: false,
+            nodeIntegration: true,
+            enableRemoteModule: true,
+            contextIsolation: false,
+          },
+        });
+        newWindow.loadURL(url);
+        return;
+      }
       shell.openExternal(url);
     });
   }
@@ -198,6 +223,9 @@ class Background {
       this.createWindow();
       this.handleWindowEvents();
 
+      // init ipcMain
+      initIpcMain(this.window, this.store);
+
       // check for updates
       this.checkForUpdates();
 
@@ -214,6 +242,11 @@ class Background {
 
       // create touch bar
       this.window.setTouchBar(createTouchBar(this.window));
+
+      // register global shortcuts
+      if (this.store.get("settings.enableGlobalShortcut")) {
+        registerGlobalShortcut(this.window);
+      }
     });
 
     app.on("activate", () => {
@@ -239,6 +272,11 @@ class Background {
 
     app.on("quit", () => {
       this.expressApp.close();
+    });
+
+    app.on("will-quit", () => {
+      // unregister all global shortcuts
+      globalShortcut.unregisterAll();
     });
   }
 }
